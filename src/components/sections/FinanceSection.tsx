@@ -281,14 +281,6 @@ const FinanceSection = () => {
           ))}
         </div>
       </div>
-
-      {/* Add Transaction Button */}
-      <div className="p-4 bg-white border-t border-gray-200">
-        <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl py-3 flex items-center justify-center space-x-2">
-          <Plus className="w-4 h-4" />
-          <span>Add Transaction</span>
-        </Button>
-      </div>
     </div>
   );
 };

@@ -4,6 +4,14 @@ import { Send, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+// Firebase imports
+import { db } from '@/lib/firebaseConfig';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+// Groq-AI SDK
+import Groq from "groq-sdk";
+
+// message format
 interface Message {
   id: string;
   text: string;
@@ -11,11 +19,26 @@ interface Message {
   timestamp: Date;
 }
 
+// financial record format
+interface FinancialRecord {
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category?: string;
+  timestamp: Date;
+}
+
+// Initialize Groq client
+const groq = new Groq({
+  apiKey: import.meta.env.VITE_PUBLIC_GROQ_API_KEY,
+  dangerouslyAllowBrowser: true
+});
+
 const ChatbotSection = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      text: "Hello! I'm your personal finance assistant. How can I help you today?",
+      text: "Hallo bray, mau catat pengeluaran atau pemasukan nih...?",
       sender: "bot",
       timestamp: new Date(),
     },
@@ -32,6 +55,146 @@ const ChatbotSection = () => {
     scrollToBottom();
   }, [messages]);
 
+  const queryGroqAI = async (prompt: string): Promise<string> => {
+    try {
+      const chatCompletion = await groq.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content: `Anda adalah asisten keuangan pribadi yang membantu mencatat pemasukan dan pengeluaran. 
+            Tanggapi dengan singkat dan jelas. Jika pengguna menyebutkan nominal uang, ekstrak informasi berikut:
+            - Jenis (pemasukan/pengeluaran)
+            - Jumlah (dalam angka)
+            - Kategori (jika ada)
+            - Deskripsi
+            
+            Format respons untuk transaksi keuangan:
+            "✅ [Pemasukan] [Deskripsi] [Nominal] [Kategori (jika ada)]"
+            atau
+            "💸 [Pengeluaran] [Deskripsi] [Nominal] [Kategori (jika ada)]"
+            
+            Untuk pertanyaan umum, berikan jawaban yang membantu.`
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.3,
+        max_tokens: 256
+      });
+      
+      return chatCompletion.choices[0]?.message?.content || "Maaf, saya tidak bisa memproses permintaan Anda saat ini.";
+    } catch (error) {
+      console.error("Error querying Groq AI:", error);
+      return "Maaf, terjadi kesalahan saat memproses permintaan Anda.";
+    }
+  };
+
+  const extractFinancialData = (aiResponse: string): FinancialRecord | null => {
+    const amount = extractAmountFromText(aiResponse);
+    if (amount <= 0) return null;
+
+    // Detect transaction type
+    const isIncome = aiResponse.includes('✅');
+    const isExpense = aiResponse.includes('💸');
+    
+    // Save entire text as description
+    const fullDescription = aiResponse.trim();
+    
+    // Extract category with format "Kategori: [category_name]"
+    let category = 'lainnya';
+    const categoryRegex = /Kategori:\s*([^\n]+)/i;
+    const categoryMatch = aiResponse.match(categoryRegex);
+    
+    if (categoryMatch && categoryMatch[1]) {
+      category = categoryMatch[1].trim();
+    } else {
+      // Fallback: look for category keywords in text
+      const commonCategories = ['makanan', 'elektronik', 'transportasi', 'hiburan', 'belanja'];
+      for (const cat of commonCategories) {
+        if (aiResponse.toLowerCase().includes(cat)) {
+          category = cat;
+          break;
+        }
+      }
+    }
+
+    return {
+      description: fullDescription,
+      amount: amount,
+      type: isIncome ? 'income' : 'expense',
+      category: category,
+      timestamp: new Date()
+    };
+  };
+
+  const saveFinancialRecord = async (record: FinancialRecord) => {
+    try {
+      // Clean description by removing category part
+      let cleanDescription = record.description
+        .replace(new RegExp(`Kategori:\\s*${record.category}`, 'i'), '')
+        .trim();
+    
+      await addDoc(collection(db, 'financial_records'), {
+        description: cleanDescription,
+        amount: record.amount,
+        type: record.type,
+        category: record.category || 'uncategorized',
+        timestamp: serverTimestamp()
+      });
+    
+      return true;
+    } catch (error) {
+      console.error("Hmm ada error nih, maaf ya:", error);
+      return false;
+    }
+  };
+
+  const saveChatMessage = async (message: string, sender: 'user' | 'bot') => {
+    try {
+      const amount = extractAmountFromText(message);
+      
+      await addDoc(collection(db, 'user_chat'), {
+        description: message,
+        amount: amount,
+        sender,
+        timestamp: serverTimestamp()
+      });
+    } catch (error) {
+      console.error("Error saving chat message:", error);
+    }
+  };
+
+  const extractAmountFromText = (text: string): number => {
+    // Match formats like "70.000", "70rb", "70000", etc.
+    const amountRegex = /(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+)\s*(?:rb|ribu|jt|juta)?/i;
+    const match = text.match(amountRegex);
+    
+    if (match) {
+      let amountStr = match[1];
+      
+      // Normalize number format
+      amountStr = amountStr
+        .replace(/\./g, '') // Remove dots (format 70.000)
+        .replace(',', '.');  // Replace comma with dot (format 70,000)
+      
+      const amount = parseFloat(amountStr);
+      
+      // Handle suffixes like 'rb' or 'juta'
+      if (match[2]) {
+        const suffix = match[2].toLowerCase();
+        if (suffix.includes('jt') || suffix.includes('juta')) return amount * 1000000;
+        if (suffix.includes('rb') || suffix.includes('ribu')) return amount * 1000;
+      }
+      
+      return amount;
+    }
+    
+    return 0; // Default if not found
+  };
+
   const handleSendMessage = async () => {
     if (!inputText.trim()) return;
 
@@ -46,29 +209,40 @@ const ChatbotSection = () => {
     setInputText("");
     setIsTyping(true);
 
-    // Simulate AI response delay
-    setTimeout(() => {
-      const botResponses = [
-        "That's a great question about your finances! Let me help you with that.",
-        "I can help you track your expenses and create a budget plan.",
-        "Based on your spending patterns, here are some suggestions...",
-        "Would you like me to analyze your recent transactions?",
-        "I'm here to help you make better financial decisions!",
-      ];
+    try {
+      // Save user message to user_chat
+      await saveChatMessage(inputText, 'user');
 
-      const randomResponse =
-        botResponses[Math.floor(Math.random() * botResponses.length)];
-
+      const aiResponse = await queryGroqAI(inputText);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: randomResponse,
+        text: aiResponse,
         sender: "bot",
         timestamp: new Date(),
       };
 
+      // Extract and save financial data
+      const financialRecord = extractFinancialData(aiResponse);
+      if (financialRecord) {
+        await saveFinancialRecord(financialRecord);
+      } else {
+        // If not a transaction, just save to user_chat
+        await saveChatMessage(aiResponse, 'bot');
+      }
+
       setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error processing message:", error);
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        text: "Maaf, terjadi kesalahan saat memproses permintaan Anda.",
+        sender: "bot",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -86,8 +260,8 @@ const ChatbotSection = () => {
             <Bot className="w-6 h-6 text-indigo-600" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-800">Finance Assistant</h2>
-            <p className="text-sm text-gray-500">Powered by AI</p>
+            <h2 className="font-semibold text-gray-800">Finotes</h2>
+            <p className="text-sm text-gray-500">Powered by Wahyu Tri</p>
           </div>
         </div>
       </div>
@@ -113,7 +287,7 @@ const ChatbotSection = () => {
                   </div>
                 )}
                 <motion.div
-                  className={`px-4 py-3 rounded-2xl shadow-sm ${
+                  className={`px-4 py-3 rounded-xl shadow-sm max-w-64 ${
                     message.sender === "user"
                       ? "bg-indigo-600 text-white rounded-br-md"
                       : "bg-white text-gray-800 rounded-bl-md border border-gray-200"
@@ -121,7 +295,7 @@ const ChatbotSection = () => {
                   whileHover={{ scale: 1.02 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <p className="text-sm">{message.text}</p>
+                  <p className="text-sm overflow-hidden break-words">{message.text}</p>
                   <p
                     className={`text-xs mt-1 ${
                       message.sender === "user"
@@ -182,7 +356,7 @@ const ChatbotSection = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask about your finances..."
+            placeholder="ig. makan siang 14rb..."
             className="flex-1 rounded-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
           />
           <Button

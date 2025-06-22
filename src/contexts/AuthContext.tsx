@@ -45,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Static credentials check
     if (email === "admin@gmail.com" && password === "rootme") {
-      const userData = { email, name: "Admin User" };
+      const userData = { id: 1, email, name: "Admin User" };
       setUser(userData);
       localStorage.setItem("user", JSON.stringify(userData));
       setIsLoading(false);
