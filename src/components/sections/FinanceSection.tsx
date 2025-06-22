@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+'use client';
+
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,6 +22,9 @@ import {
 } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 
+import { db } from '@/lib/firebaseConfig';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
 interface Transaction {
   id: string;
   date: string;
@@ -29,10 +34,44 @@ interface Transaction {
   type: "income" | "expense";
 }
 
+interface FinanceData {
+  id: string;
+  category: string;
+  description: string;
+  amount: number;
+  type: "expense" | "income";
+}
+
 const FinanceSection = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [financeData, setFinanceData] = useState<FinanceData[]>();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
+
+  /**
+   * Fetches financial records from the Firestore database, updates the financeData state
+   * with the retrieved records, and manages the loading state while data is being fetched.
+   * Sets isLoading to true when starting the data fetch and false when data fetching completes.
+   */
+  const fetchFinanceData = async () => {
+    const q = query(collection(db, 'financial_records'));
+    const querySnapshot = await getDocs(q);
+
+    const data = [];
+
+    setIsLoading(true); // start loading
+    querySnapshot.forEach((doc) => {
+      data.push({id: doc.id, ...doc.data()});
+
+      setFinanceData(data);
+    })
+    setIsLoading(false); // end loading
+  }
+
+  useEffect(() => { 
+    fetchFinanceData() 
+  }, []);
 
   const transactions: Transaction[] = [
     {
@@ -101,6 +140,14 @@ const FinanceSection = () => {
     },
   ];
 
+  const formatIntoRupiah = (amount: number) => {
+    return Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
+  } 
+
   const filteredTransactions = transactions
     .filter((transaction) => {
       const matchesSearch =
@@ -120,13 +167,19 @@ const FinanceSection = () => {
       return a.description.localeCompare(b.description);
     });
 
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+  const incomeTransactions = financeData?.filter((t) => t.type === "income") || [];
+  const expenseTransactions = financeData?.filter((t) => t.type === "expense") || [];
+
+  const totalIncome = incomeTransactions.length
+    ? incomeTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
+    : 0;
+
+  const totalExpenses = expenseTransactions.length
+    ? expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount || 0), 0)
+    : 0;
+
   const balance = totalIncome - totalExpenses;
+
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -145,8 +198,8 @@ const FinanceSection = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-green-600 font-medium">Income</p>
-                <p className="text-lg font-bold text-green-700">
-                  ${totalIncome.toFixed(2)}
+                <p className="text-xs font-bold text-green-700">
+                  {formatIntoRupiah(totalIncome)}
                 </p>
               </div>
               <TrendingUp className="w-6 h-6 text-green-600" />
@@ -160,8 +213,8 @@ const FinanceSection = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-red-600 font-medium">Expenses</p>
-                <p className="text-lg font-bold text-red-700">
-                  ${totalExpenses.toFixed(2)}
+                <p className="text-xs font-bold text-red-700">
+                  {formatIntoRupiah(totalExpenses)}
                 </p>
               </div>
               <TrendingDown className="w-6 h-6 text-red-600" />
@@ -186,11 +239,11 @@ const FinanceSection = () => {
                   Balance
                 </p>
                 <p
-                  className={`text-lg font-bold ${
+                  className={`text-xs font-bold ${
                     balance >= 0 ? "text-blue-700" : "text-orange-700"
                   }`}
                 >
-                  ${balance.toFixed(2)}
+                  {formatIntoRupiah(balance)}
                 </p>
               </div>
             </div>
@@ -241,7 +294,18 @@ const FinanceSection = () => {
       {/* Transactions List */}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-3">
-          {filteredTransactions.map((transaction, index) => (
+          {isLoading ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              whileHover={{ scale: 1.02 }}
+              className="flex flex-col gap-2">
+              <div className="skeleton h-20 w-full"></div>
+              <div className="skeleton h-20 w-full"></div>
+              <div className="skeleton h-20 w-full"></div>
+            </motion.div>
+          ) : financeData?.map((transaction, index) => (
             <motion.div
               key={transaction.id}
               initial={{ opacity: 0, y: 20 }}
@@ -252,20 +316,24 @@ const FinanceSection = () => {
             >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-medium text-gray-800 text-sm">
+                  <div className="flex items-center flex-row gap-2 justify-between mb-1">
+                    <h3 className="font-medium text-gray-800 text-xs">
                       {transaction.description}
                     </h3>
-                    <span
-                      className={`font-bold text-sm ${
+                    <div
+                      className={`font-bold text-sm flex flex-row gap-1 ${
                         transaction.type === "income"
                           ? "text-green-600"
                           : "text-red-600"
                       }`}
                     >
-                      {transaction.type === "income" ? "+" : "-"}$
-                      {Math.abs(transaction.amount).toFixed(2)}
-                    </span>
+                      <span>
+                      {transaction.type === "income" ? "+" : "-"}
+                      </span>
+                      <span>
+                      {formatIntoRupiah(Math.abs(transaction.amount))}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
