@@ -60,7 +60,6 @@ const FinanceSection = () => {
 
     const data = [];
 
-    setIsLoading(true); // start loading
     querySnapshot.forEach((doc) => {
       data.push({id: doc.id, ...doc.data()});
 
@@ -70,7 +69,8 @@ const FinanceSection = () => {
   }
 
   useEffect(() => { 
-    fetchFinanceData() 
+    setIsLoading(true); // start loading
+    fetchFinanceData();
   }, []);
 
   const transactions: Transaction[] = [
@@ -186,7 +186,7 @@ const FinanceSection = () => {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Finance Overview
+          Catatan Keuangan
         </h2>
 
         {/* Summary Cards */}
@@ -197,12 +197,11 @@ const FinanceSection = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-green-600 font-medium">Income</p>
-                <p className="text-xs font-bold text-green-700">
-                  {formatIntoRupiah(totalIncome)}
+                <p className="text-xs text-green-600 font-medium">Pemasukan</p>
+                <p className="text-xs font-bold text-green-700 flex flex-row gap-1">
+                  <span>{formatIntoRupiah(totalIncome)}</span> <TrendingUp className="w-4 h-4 text-green-600" />
                 </p>
               </div>
-              <TrendingUp className="w-6 h-6 text-green-600" />
             </div>
           </motion.div>
 
@@ -212,12 +211,11 @@ const FinanceSection = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-red-600 font-medium">Expenses</p>
-                <p className="text-xs font-bold text-red-700">
-                  {formatIntoRupiah(totalExpenses)}
+                <p className="text-xs text-red-600 font-medium">Pengeluaran</p>
+                <p className="text-xs font-bold text-red-700 flex flex-row gap-1">
+                  <span>{formatIntoRupiah(totalExpenses)}</span> <TrendingDown className="w-4 h-4 text-red-600" />
                 </p>
               </div>
-              <TrendingDown className="w-6 h-6 text-red-600" />
             </div>
           </motion.div>
 
@@ -236,7 +234,7 @@ const FinanceSection = () => {
                     balance >= 0 ? "text-blue-600" : "text-orange-600"
                   }`}
                 >
-                  Balance
+                  Neraca
                 </p>
                 <p
                   className={`text-xs font-bold ${
