@@ -11,15 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card } from "@/components/ui/card";
+import { Empty } from 'antd';
 
 import { db } from '@/lib/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
@@ -325,7 +317,7 @@ const FinanceSection = () => {
             ))
           ) : (
             <div className="text-center py-8 text-gray-500">
-              No transactions found
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Hmm transaksi masih kosong nih!" />
             </div>
           )}
         </div>
