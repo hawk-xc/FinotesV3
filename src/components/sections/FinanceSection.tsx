@@ -25,25 +25,21 @@ import { Card } from "@/components/ui/card";
 import { db } from '@/lib/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
-interface Transaction {
-  id: string;
-  date: string;
-  description: string;
-  category: string;
-  amount: number;
-  type: "income" | "expense";
-}
-
 interface FinanceData {
   id: string;
   category: string;
   description: string;
   amount: number;
   type: "expense" | "income";
+  timestamp: {
+    seconds: number;
+    nanoseconds: number;
+  };
 }
 
 const FinanceSection = () => {
-  const [financeData, setFinanceData] = useState<FinanceData[]>();
+  const [financeData, setFinanceData] = useState<FinanceData[]>([]); 
+  const [filteredData, setFilteredData] = useState<FinanceData[]>([]); 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -58,14 +54,14 @@ const FinanceSection = () => {
     const q = query(collection(db, 'financial_records'));
     const querySnapshot = await getDocs(q);
 
-    const data = [];
-
+    const data: FinanceData[] = [];
     querySnapshot.forEach((doc) => {
-      data.push({id: doc.id, ...doc.data()});
-
-      setFinanceData(data);
-    })
-    setIsLoading(false); // end loading
+      data.push({id: doc.id, ...doc.data()} as FinanceData);
+    });
+    
+    setFinanceData(data);
+    setFilteredData(data); // Initialize filteredData with all data
+    setIsLoading(false);
   }
 
   useEffect(() => { 
@@ -73,72 +69,40 @@ const FinanceSection = () => {
     fetchFinanceData();
   }, []);
 
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      date: "2024-01-15",
-      description: "Grocery Shopping",
-      category: "Food",
-      amount: -85.5,
-      type: "expense",
-    },
-    {
-      id: "2",
-      date: "2024-01-14",
-      description: "Salary Deposit",
-      category: "Income",
-      amount: 3500.0,
-      type: "income",
-    },
-    {
-      id: "3",
-      date: "2024-01-13",
-      description: "Gas Station",
-      category: "Transportation",
-      amount: -45.2,
-      type: "expense",
-    },
-    {
-      id: "4",
-      date: "2024-01-12",
-      description: "Coffee Shop",
-      category: "Food",
-      amount: -12.75,
-      type: "expense",
-    },
-    {
-      id: "5",
-      date: "2024-01-11",
-      description: "Netflix Subscription",
-      category: "Entertainment",
-      amount: -15.99,
-      type: "expense",
-    },
-    {
-      id: "6",
-      date: "2024-01-10",
-      description: "Freelance Payment",
-      category: "Income",
-      amount: 750.0,
-      type: "income",
-    },
-    {
-      id: "7",
-      date: "2024-01-09",
-      description: "Electricity Bill",
-      category: "Utilities",
-      amount: -120.0,
-      type: "expense",
-    },
-    {
-      id: "8",
-      date: "2024-01-08",
-      description: "Restaurant Dinner",
-      category: "Food",
-      amount: -68.9,
-      type: "expense",
-    },
-  ];
+  useEffect(() => {
+    let result = [...financeData];
+    
+    // Apply category filter
+    if (categoryFilter !== "all") {
+      result = result.filter(item => item.category.toLowerCase() === categoryFilter.toLowerCase());
+    }
+    
+    // Apply search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(item => 
+        item.description.toLowerCase().includes(term) || 
+        item.category.toLowerCase().includes(term)
+      );
+    }
+    
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "amount":
+          return b.amount - a.amount;
+        case "description":
+          return a.description.localeCompare(b.description);
+        case "date":
+        default:
+          return b.timestamp.seconds - a.timestamp.seconds;
+      }
+    });
+    
+    setFilteredData(result);
+  }, [financeData, categoryFilter, searchTerm, sortBy]);
+
+  const incomeTransactions = filteredData.filter((t) => t.type === "income");
+  const expenseTransactions = filteredData.filter((t) => t.type === "expense");
 
   const formatIntoRupiah = (amount: number) => {
     return Intl.NumberFormat("id-ID", {
@@ -147,28 +111,6 @@ const FinanceSection = () => {
       minimumFractionDigits: 0,
     }).format(amount);
   } 
-
-  const filteredTransactions = transactions
-    .filter((transaction) => {
-      const matchesSearch =
-        transaction.description
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()) ||
-        transaction.category.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory =
-        categoryFilter === "all" ||
-        transaction.category.toLowerCase() === categoryFilter.toLowerCase();
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      if (sortBy === "date")
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      if (sortBy === "amount") return Math.abs(b.amount) - Math.abs(a.amount);
-      return a.description.localeCompare(b.description);
-    });
-
-  const incomeTransactions = financeData?.filter((t) => t.type === "income") || [];
-  const expenseTransactions = financeData?.filter((t) => t.type === "expense") || [];
 
   const totalIncome = incomeTransactions.length
     ? incomeTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
@@ -253,7 +195,7 @@ const FinanceSection = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
-              placeholder="Search transactions..."
+              placeholder="Cari Transaksi..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 rounded-xl border-gray-300"
@@ -267,7 +209,7 @@ const FinanceSection = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="food">Food</SelectItem>
+                <SelectItem value="makanan">Makanan</SelectItem>
                 <SelectItem value="transportation">Transportation</SelectItem>
                 <SelectItem value="entertainment">Entertainment</SelectItem>
                 <SelectItem value="utilities">Utilities</SelectItem>
@@ -280,9 +222,9 @@ const FinanceSection = () => {
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date">Date</SelectItem>
-                <SelectItem value="amount">Amount</SelectItem>
-                <SelectItem value="description">Description</SelectItem>
+                <SelectItem value="date">Tanggal</SelectItem>
+                <SelectItem value="amount">Nominal</SelectItem>
+                <SelectItem value="description">Deskripsi</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -303,48 +245,60 @@ const FinanceSection = () => {
               <div className="skeleton h-20 w-full"></div>
               <div className="skeleton h-20 w-full"></div>
             </motion.div>
-          ) : financeData?.map((transaction, index) => (
-            <motion.div
-              key={transaction.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileHover={{ scale: 1.02 }}
-              className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center flex-row gap-2 justify-between mb-1">
-                    <h3 className="font-medium text-gray-800 text-xs">
-                      {transaction.description}
-                    </h3>
-                    <div
-                      className={`font-bold text-sm flex flex-row gap-1 ${
-                        transaction.type === "income"
-                          ? "text-green-600"
-                          : "text-red-600"
-                      }`}
-                    >
-                      <span>
-                      {transaction.type === "income" ? "+" : "-"}
-                      </span>
-                      <span>
-                      {formatIntoRupiah(Math.abs(transaction.amount))}
-                      </span>
+          ) : filteredData.length > 0 ? (
+            filteredData.map((transaction, index) => (
+              <motion.div
+                key={transaction.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.02 }}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
+              >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center flex-row gap-2 justify-between mb-1">
+                        <h3 className="font-medium text-gray-800 text-xs">
+                          {transaction.description}
+                        </h3>
+                        <div
+                          className={`font-bold text-sm flex flex-row gap-1 ${
+                            transaction.type === "income"
+                              ? "text-green-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          <span>
+                          {transaction.type === "income" ? "+" : "-"}
+                          </span>
+                          <span>
+                          {formatIntoRupiah(Math.abs(transaction.amount))}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {transaction.category}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(transaction.timestamp.seconds * 1000).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                      {transaction.category}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {new Date(transaction.date).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+                </motion.div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              No transactions found
+            </div>
+          )}
         </div>
       </div>
     </div>
