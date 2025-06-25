@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 
 // Firebase imports
 import { db } from '@/lib/firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 
 // Groq-AI SDK
 import Groq from "groq-sdk";
@@ -130,6 +130,35 @@ const ChatbotSection = () => {
     };
   };
 
+  const storeCategories = async (category: string) => {
+    try {
+      const normalizedCategory = category.toLowerCase().trim();
+      
+      // firebase check handler
+      const q = query(
+        collection(db, 'user_categories'),
+        where('category', '==', normalizedCategory)
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (snapshot.size > 0) {
+        console.log(`Kategori "${normalizedCategory}" sudah ada, diabaikan`);
+        return; // Keluar tanpa melakukan apa-apa
+      }
+
+      await addDoc(collection(db, 'user_categories'), {
+        category: normalizedCategory,
+        timestamp: serverTimestamp()
+      });
+
+      return true;
+    } catch (error) {
+      console.error('err: ', error);
+      return false;
+    }
+  }
+
   const saveFinancialRecord = async (record: FinancialRecord) => {
     try {
       // Clean description by removing category part
@@ -144,7 +173,9 @@ const ChatbotSection = () => {
         category: record.category || 'uncategorized',
         timestamp: serverTimestamp()
       });
-    
+
+      record.category && await storeCategories(record?.category);
+
       return true;
     } catch (error) {
       console.error("Hmm ada error nih, maaf ya:", error);
