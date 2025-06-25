@@ -37,13 +37,40 @@ interface FinanceData {
   };
 }
 
+interface categoryData {
+  id: string;
+  category: string;
+  timestamp: {
+    seconds: number;
+    nanoseconds: number;
+  };
+}
+
 const FinanceSection = () => {
   const [financeData, setFinanceData] = useState<FinanceData[]>([]); 
+  const [categoryData, setCategoryData] = useState<categoryData[]>([]);
   const [filteredData, setFilteredData] = useState<FinanceData[]>([]); 
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
+
+  /**
+   * Fetches categories from the Firestore database, updates the categoryData state
+   * with the retrieved records.
+   */
+  const fetchCategoryData = async () => {
+    const q = query(collection(db, 'user_categories'));
+    const querySnapshot = await getDocs(q);
+
+    const data: categoryData[] = [];
+
+    querySnapshot.forEach((doc) => {
+      data.push({id: doc.id, ...doc.data()} as categoryData);
+    });
+
+    setCategoryData(data);
+  };
 
   /**
    * Fetches financial records from the Firestore database, updates the financeData state
@@ -58,6 +85,9 @@ const FinanceSection = () => {
     querySnapshot.forEach((doc) => {
       data.push({id: doc.id, ...doc.data()} as FinanceData);
     });
+
+    // get category data
+    await fetchCategoryData();
     
     setFinanceData(data);
     setFilteredData(data); // Initialize filteredData with all data
@@ -208,12 +238,12 @@ const FinanceSection = () => {
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="makanan">Makanan</SelectItem>
-                <SelectItem value="transportation">Transportation</SelectItem>
-                <SelectItem value="entertainment">Entertainment</SelectItem>
-                <SelectItem value="utilities">Utilities</SelectItem>
-                <SelectItem value="income">Income</SelectItem>
+                <SelectItem value="all">Semua Kategori</SelectItem>
+                {categoryData?.map((category) => (
+                  <SelectItem key={category.id} value={category.category}>
+                    {category.category.charAt(0).toUpperCase() + category.category.slice(1)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
