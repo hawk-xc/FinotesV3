@@ -1,46 +1,37 @@
-import React from "react";
+'use client';
+
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Edit, LogOut, Settings, Bell, Shield, HelpCircle } from "lucide-react";
+import { Heart, LogOut, Settings, Bell, Shield, HelpCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 
 const ProfileSection = () => {
   const { user, logout } = useAuth();
+  const [loveCounter, setLoveCounter] = useState<number>(0);
+
+  const handleLoveCounter = async () => {
+    try {
+      setLoveCounter((prev) => prev + 1);
+      return true;
+    }
+    catch (error) {
+      return false;
+    }
+  }
 
   const menuItems = [
     {
-      icon: Edit,
-      label: "Edit Profile",
-      action: () => console.log("Edit profile"),
-    },
-    {
-      icon: Settings,
-      label: "Settings",
-      action: () => console.log("Settings"),
-    },
-    {
-      icon: Bell,
-      label: "Notifications",
-      action: () => console.log("Notifications"),
-    },
-    {
-      icon: Shield,
-      label: "Privacy & Security",
-      action: () => console.log("Privacy"),
-    },
-    {
-      icon: HelpCircle,
-      label: "Help & Support",
-      action: () => console.log("Help"),
+      icon: Heart,
+      label: "Suka aplikasi ini",
     },
   ];
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col overflow-y-auto h-full bg-gray-50 ">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
-        <h2 className="text-xl font-semibold text-gray-800">Profile</h2>
+        <h2 className="text-xl font-semibold text-gray-800">Profil</h2>
       </div>
 
       {/* Profile Info */}
@@ -48,7 +39,7 @@ const ProfileSection = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6"
+          className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-4"
         >
           <div className="flex items-center space-x-4">
             <motion.div
@@ -62,17 +53,37 @@ const ProfileSection = () => {
                 {user?.name || "Admin User"}
               </h3>
               <p className="text-gray-600">
-                {user?.email || "admin@gmail.com"}
+                {user?.email || "admin.exa@gmail.com"}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Member since January 2024
+                Anggota sejak Januari 2024
               </p>
             </div>
           </div>
         </motion.div>
 
+        <div className="space-y-3 mb-4">
+          <motion.button
+            key='account-login-info'
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1 * 0.1 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex items-center space-x-3 text-left hover:bg-gray-50 transition-colors"
+          >
+            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+              <img src="https://www.vectorlogo.zone/logos/google/google-icon.svg" alt="" className="w-6 aspect-square" />
+            </div>
+            <span className="flex-1 font-medium text-gray-800">
+              Bergabung menggunakan Google
+            </span>
+            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+          </motion.button>
+        </div>
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 mb-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
             className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
@@ -106,16 +117,24 @@ const ProfileSection = () => {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={item.action}
+                onClick={handleLoveCounter}
                 className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex items-center space-x-3 text-left hover:bg-gray-50 transition-colors"
               >
                 <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-gray-600" />
+                  {loveCounter > 0 ? (
+                    <Icon className="w-5 h-5 text-red-600" />
+                  ) : (
+                    <Icon className="w-5 h-5 text-gray-600" />
+                  )}
                 </div>
                 <span className="flex-1 font-medium text-gray-800">
                   {item.label}
                 </span>
                 <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                {loveCounter > 0 && (
+                  <span className="font-bold text-sm text-slate-500">
+                    {loveCounter}x
+                  </span>)}
               </motion.button>
             );
           })}

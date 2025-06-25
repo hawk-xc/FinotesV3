@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, Plus, TrendingDown, TrendingUp } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -169,9 +168,9 @@ const FinanceSection = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-green-600 font-medium">Pemasukan</p>
+                <p className="text-xs text-green-600 font-medium flex flex-row gap-2">Pemasukan <TrendingUp className="w-4 h-4 text-green-600" /></p>
                 <p className="text-xs font-bold text-green-700 flex flex-row gap-1">
-                  <span>{formatIntoRupiah(totalIncome)}</span> <TrendingUp className="w-4 h-4 text-green-600" />
+                  <span>{formatIntoRupiah(totalIncome)}</span>
                 </p>
               </div>
             </div>
@@ -183,9 +182,9 @@ const FinanceSection = () => {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-red-600 font-medium">Pengeluaran</p>
+                <p className="text-xs text-red-600 font-medium flex flex-row gap-1">Pengeluaran <TrendingDown className="w-4 h-4 text-red-600" /></p>
                 <p className="text-xs font-bold text-red-700 flex flex-row gap-1">
-                  <span>{formatIntoRupiah(totalExpenses)}</span> <TrendingDown className="w-4 h-4 text-red-600" />
+                  <span>{formatIntoRupiah(totalExpenses)}</span>
                 </p>
               </div>
             </div>
