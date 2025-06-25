@@ -1,14 +1,42 @@
 'use client';
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Heart, LogOut, Settings, Bell, Shield, HelpCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { db } from '@/lib/firebaseConfig';
+import { collection, query, getDocs } from 'firebase/firestore';
 
 const ProfileSection = () => {
   const { user, logout } = useAuth();
   const [loveCounter, setLoveCounter] = useState<number>(0);
+  const [transaction, setTransaction] = useState<number>(0);
+  const [amountTotal, setAmountTotal] = useState<number>(0);
+
+  // handle transaction && total asset
+  const handleGeneralInformation = async () => {
+    try {
+      const q = query(collection(db, 'financial_records'));
+      const querySnapshot = await getDocs(q);
+
+      let total = 0;
+      let amount = 0;
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        amount += data?.amount ?? 0;
+        total += 1;
+      });
+
+      setTransaction(total);
+      setAmountTotal(amount); 
+
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
+  }
 
   const handleLoveCounter = async () => {
     try {
@@ -19,6 +47,23 @@ const ProfileSection = () => {
       return false;
     }
   }
+
+  const formatFriendlyRupiah = (amount: number): string => {
+    if (amount >= 1_000_000_000) {
+      return `${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')} M`;
+    } else if (amount >= 1_000_000) {
+      return `${(amount / 1_000_000).toFixed(1).replace(/\.0$/, '')} Jt`;
+    } else if (amount >= 1_000) {
+      return `${(amount / 1_000).toFixed(1).replace(/\.0$/, '')} Ribu`;
+    } else {
+      return `${amount}`;
+    }
+  };
+
+
+  useEffect(() => {
+    handleGeneralInformation();
+  }, []);
 
   const menuItems = [
     {
@@ -89,8 +134,8 @@ const ProfileSection = () => {
             className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
           >
             <div className="text-center">
-              <p className="text-2xl font-bold text-indigo-600">156</p>
-              <p className="text-sm text-gray-600">Transactions</p>
+              <p className="text-2xl font-bold text-indigo-600">{transaction}</p>
+              <p className="text-sm text-gray-600">Transaksi</p>
             </div>
           </motion.div>
 
@@ -99,8 +144,8 @@ const ProfileSection = () => {
             className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
           >
             <div className="text-center">
-              <p className="text-2xl font-bold text-green-600">$2,450</p>
-              <p className="text-sm text-gray-600">Saved This Month</p>
+              <p className="text-2xl font-bold text-green-600">{formatFriendlyRupiah(amountTotal)}</p>
+              <p className="text-sm text-gray-600">Total Asset</p>
             </div>
           </motion.div>
         </div>
