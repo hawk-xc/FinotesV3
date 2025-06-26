@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+'use client';
+
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import LoginPage from "./auth/LoginPage";
@@ -6,15 +8,19 @@ import BottomNavigation from "./layout/BottomNavigation";
 import ChatbotSection from "./sections/ChatbotSection";
 import FinanceSection from "./sections/FinanceSection";
 import ProfileSection from "./sections/ProfileSection";
+import { useNavigate } from "react-router-dom";
 
 function Home() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("chatbot");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  if (!user) {
-    return <LoginPage />;
-  }
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate("/login");
+    }
+  }, [user, navigate, isLoading]);
 
   const handleTabChange = (tab: string) => {
     if (tab === activeTab) return;
@@ -44,7 +50,7 @@ function Home() {
       {/* Main Content */}
       <div className="flex-1 overflow-hidden pb-20">
         <AnimatePresence mode="wait">
-          {isLoading ? (
+          {isLoading || !user ? (
             <motion.div
               key="loading"
               initial={{ opacity: 0 }}
