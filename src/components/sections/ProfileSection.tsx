@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { db } from '@/lib/firebaseConfig';
 import { collection, query, getDocs } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
+import GoogleLogo from "../particles/GoogleLogo";
 
 const ProfileSection = () => {
   const { user, logout } = useAuth();
@@ -159,8 +160,8 @@ const ProfileSection = () => {
             whileTap={{ scale: 0.98 }}
             className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex items-center space-x-3 text-left hover:bg-gray-50 transition-colors"
           >
-            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-              <img src="https://www.vectorlogo.zone/logos/google/google-icon.svg" alt="" className="w-6 aspect-square" />
+            <div className="w-10 h-10 bg-gray-100 p-2 rounded-full flex items-center justify-center">
+              <GoogleLogo alt="google-logo.profile" className="w-6 aspect-square" />
             </div>
             <span className="flex-1 font-medium text-gray-800">
               Bergabung menggunakan Google

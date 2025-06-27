@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { auth, provider } from "@/lib/firebaseConfig";
 import { signInWithPopup } from "firebase/auth";
+import GoogleLogo from '../particles/GoogleLogo';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ const LoginPage = () => {
       login(firebaseUser);
       navigate("/");
     } catch (err) {
-      console.error("Login error:", err);
+      console.error("Login error:", err, error);
       setError("Gagal login. Silakan coba lagi.");
     }
   };
@@ -82,8 +83,8 @@ const LoginPage = () => {
                   </div>
                 ) : (
                   <div className="flex flex-row gap-2 align-middle items-center">
-                    <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                      <img src="https://www.vectorlogo.zone/logos/google/google-icon.svg" alt="" className="w-6 aspect-square" />
+                    <div className="w-10 h-10 bg-gray-100 p-2 rounded-full flex items-center justify-center">
+                      <GoogleLogo alt="" className="w-3 aspect-square" />
                     </div>
                       Sign In dengan akun Google
                     </div>
