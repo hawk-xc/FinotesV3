@@ -1,18 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Heart, LogOut, Settings, Bell, Shield, HelpCircle } from "lucide-react";
+import { Heart, LogOut, Brain } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { db } from '@/lib/firebaseConfig';
 import { collection, query, getDocs } from 'firebase/firestore';
+import { useNavigate } from "react-router-dom";
 
 const ProfileSection = () => {
   const { user, logout } = useAuth();
+  console.log(user);
   const [loveCounter, setLoveCounter] = useState<number>(0);
   const [transaction, setTransaction] = useState<number>(0);
   const [amountTotal, setAmountTotal] = useState<number>(0);
+
+  const navigate = useNavigate();
 
   // handle transaction && total asset
   const handleGeneralInformation = async () => {
@@ -38,6 +42,7 @@ const ProfileSection = () => {
     }
   }
 
+  // love counter
   const handleLoveCounter = async () => {
     try {
       setLoveCounter((prev) => prev + 1);
@@ -48,6 +53,12 @@ const ProfileSection = () => {
     }
   }
 
+  // route to about
+  const routeToAbout = () => {
+    navigate('about-developer');
+  }
+
+  // rupiah format
   const formatFriendlyRupiah = (amount: number): string => {
     if (amount >= 1_000_000_000) {
       return `${(amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '')} M`;
@@ -60,6 +71,23 @@ const ProfileSection = () => {
     }
   };
 
+  const formatFirebaseDate = (dateString: string | undefined, prefix: string = 'Bergabung sejak') => {
+    if (!dateString) return `${prefix} -`;
+    
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    const date = new Date(dateString);
+
+    if (isNaN(date.getTime())) return `${prefix} -`;
+
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${prefix} ${month} ${year}`;
+  };
 
   useEffect(() => {
     handleGeneralInformation();
@@ -69,7 +97,13 @@ const ProfileSection = () => {
     {
       icon: Heart,
       label: "Suka aplikasi ini",
+      handler: handleLoveCounter
     },
+    {
+      icon: Brain,
+      label: "Kenalan dengan Programmer",
+      handler: routeToAbout
+    }
   ];
 
   return (
@@ -91,7 +125,15 @@ const ProfileSection = () => {
               whileHover={{ scale: 1.05 }}
               className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold"
             >
-              {user?.name?.charAt(0) || "A"}
+              {/* user photo */}
+              {user.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  referrerPolicy="no-referrer" 
+                  alt="Profile"
+                  className="aspect-square rounded-full"
+                />
+              ) : user?.name?.charAt(0) || "A"}
             </motion.div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-800">
@@ -101,7 +143,7 @@ const ProfileSection = () => {
                 {user?.email || "admin.exa@gmail.com"}
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                Anggota sejak Januari 2024
+                {formatFirebaseDate(user?.metadata?.creationTime)}
               </p>
             </div>
           </div>
@@ -162,11 +204,11 @@ const ProfileSection = () => {
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={handleLoveCounter}
+                onClick={item.handler}
                 className="w-full bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex items-center space-x-3 text-left hover:bg-gray-50 transition-colors"
               >
                 <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                  {loveCounter > 0 ? (
+                  {item.icon === Heart && loveCounter > 0 ? (
                     <Icon className="w-5 h-5 text-red-600" />
                   ) : (
                     <Icon className="w-5 h-5 text-gray-600" />
@@ -176,7 +218,7 @@ const ProfileSection = () => {
                   {item.label}
                 </span>
                 <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
-                {loveCounter > 0 && (
+                {item.icon === Heart && loveCounter > 0 && (
                   <span className="font-bold text-sm text-slate-500">
                     {loveCounter}x
                   </span>)}
