@@ -16,8 +16,12 @@ import { Empty } from 'antd';
 import { db } from '@/lib/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
+// get user auth data
+import { useAuth } from "@/contexts/AuthContext";
+
 interface FinanceData {
   id: string;
+  user_id: string;
   category: string;
   description: string;
   amount: number;
@@ -30,6 +34,7 @@ interface FinanceData {
 
 interface categoryData {
   id: string;
+  user_id: string;
   category: string;
   timestamp: {
     seconds: number;
@@ -46,12 +51,14 @@ const FinanceSection = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
 
+  const { user } = useAuth();
+
   /**
    * Fetches categories from the Firestore database, updates the categoryData state
    * with the retrieved records.
    */
   const fetchCategoryData = async () => {
-    const q = query(collection(db, 'user_categories'));
+    const q = query(collection(db, 'user_categories'), where('user_id', '==', user.uid));
     const querySnapshot = await getDocs(q);
 
     const data: categoryData[] = [];
@@ -69,7 +76,7 @@ const FinanceSection = () => {
    * Sets isLoading to true when starting the data fetch and false when data fetching completes.
    */
   const fetchFinanceData = async () => {
-    const q = query(collection(db, 'financial_records'));
+    const q = query(collection(db, 'financial_records'), where('user_id', '==', user.uid));
     const querySnapshot = await getDocs(q);
 
     const data: FinanceData[] = [];

@@ -4,6 +4,9 @@ import { Send, Bot, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+// get user auth data
+import { useAuth } from "@/contexts/AuthContext";
+
 // Firebase imports
 import { db } from '@/lib/firebaseConfig';
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
@@ -14,6 +17,7 @@ import Groq from "groq-sdk";
 // message format
 interface Message {
   id: string;
+  user_id: string;
   text: string;
   sender: "user" | "bot";
   timestamp: Date;
@@ -21,6 +25,7 @@ interface Message {
 
 // financial record format
 interface FinancialRecord {
+  user_id: string;
   description: string;
   amount: number;
   type: 'income' | 'expense';
@@ -35,6 +40,7 @@ const groq = new Groq({
 });
 
 const ChatbotSection = () => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -122,6 +128,7 @@ const ChatbotSection = () => {
     }
 
     return {
+      user_id: user.uid,
       description: fullDescription,
       amount: amount,
       type: isIncome ? 'income' : 'expense',
@@ -137,6 +144,7 @@ const ChatbotSection = () => {
       // firebase check handler
       const q = query(
         collection(db, 'user_categories'),
+        where('user_id', '==', user.uid),
         where('category', '==', normalizedCategory)
       );
 
@@ -144,7 +152,7 @@ const ChatbotSection = () => {
 
       if (snapshot.size > 0) {
         console.log(`Kategori "${normalizedCategory}" sudah ada, diabaikan`);
-        return; // Keluar tanpa melakukan apa-apa
+        return;
       }
 
       await addDoc(collection(db, 'user_categories'), {
@@ -167,6 +175,7 @@ const ChatbotSection = () => {
         .trim();
     
       await addDoc(collection(db, 'financial_records'), {
+        user_id: user.uid,
         description: cleanDescription,
         amount: record.amount,
         type: record.type,
@@ -188,6 +197,7 @@ const ChatbotSection = () => {
       const amount = extractAmountFromText(message);
       
       await addDoc(collection(db, 'user_chat'), {
+        user_id: user.uid,
         description: message,
         amount: amount,
         sender,
@@ -231,6 +241,7 @@ const ChatbotSection = () => {
 
     const userMessage: Message = {
       id: Date.now().toString(),
+      user_id: user.uid,
       text: inputText,
       sender: "user",
       timestamp: new Date(),
@@ -247,6 +258,7 @@ const ChatbotSection = () => {
       const aiResponse = await queryGroqAI(inputText);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
+        user_id: user.uid,
         text: aiResponse,
         sender: "bot",
         timestamp: new Date(),
@@ -266,6 +278,7 @@ const ChatbotSection = () => {
       console.error("Error processing message:", error);
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
+        user_id: user.uid,
         text: "Maaf, terjadi kesalahan saat memproses permintaan Anda.",
         sender: "bot",
         timestamp: new Date(),

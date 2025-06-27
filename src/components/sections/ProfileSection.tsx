@@ -6,13 +6,12 @@ import { Heart, LogOut, Brain } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { db } from '@/lib/firebaseConfig';
-import { collection, query, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs, where } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
 import GoogleLogo from "../particles/GoogleLogo";
 
 const ProfileSection = () => {
   const { user, logout } = useAuth();
-  console.log(user);
   const [loveCounter, setLoveCounter] = useState<number>(0);
   const [transaction, setTransaction] = useState<number>(0);
   const [amountTotal, setAmountTotal] = useState<number>(0);
@@ -22,7 +21,8 @@ const ProfileSection = () => {
   // handle transaction && total asset
   const handleGeneralInformation = async () => {
     try {
-      const q = query(collection(db, 'financial_records'));
+      const q = query(collection(db, 'financial_records'), where('user_id', '==', user.uid));
+      
       const querySnapshot = await getDocs(q);
 
       let total = 0;
