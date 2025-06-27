@@ -84,7 +84,7 @@ const LoginPage = () => {
                 ) : (
                   <div className="flex flex-row gap-2 align-middle items-center">
                     <div className="w-10 h-10 bg-gray-100 p-2 rounded-full flex items-center justify-center">
-                      <GoogleLogo alt="" className="w-3 aspect-square" />
+                      <GoogleLogo alt="" className="w-6 aspect-square" />
                     </div>
                       Sign In dengan akun Google
                     </div>
