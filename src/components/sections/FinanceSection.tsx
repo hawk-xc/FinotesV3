@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence} from "framer-motion";
-import { Search, TrendingDown, TrendingUp } from "lucide-react";
-import { Modal } from "@/components/Modal"; 
+import { Search, TrendingDown, TrendingUp, Calendar } from "lucide-react";
+import { Modal } from "@/components/particles/Modal"; 
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -15,7 +15,7 @@ import {
 import { Empty } from 'antd';
 
 import { db } from '@/lib/firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
 
 // get user auth data
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,7 +43,7 @@ interface categoryData {
   };
 }
 
-const FinanceSection = () => {
+const FinanceSection = (): React.JSX.Element => {
   const [financeData, setFinanceData] = useState<FinanceData[]>([]); 
   const [categoryData, setCategoryData] = useState<categoryData[]>([]);
   const [filteredData, setFilteredData] = useState<FinanceData[]>([]); 
@@ -52,33 +52,33 @@ const FinanceSection = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
 
-  const [longPressId, setLongPressId] = useState<string | null>(null);
-const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-const handlePointerDown = (id: string) => {
-  timeoutRef.current = setTimeout(() => {
-    setLongPressId(id); // tampilkan modal
-  }, 600); // 600ms untuk long press
-};
-
-const handlePointerUp = () => {
-  if (timeoutRef.current) {
-    clearTimeout(timeoutRef.current);
-  }
-};
-
-const handleDelete = (id: string) => {
-  alert(`Data dengan ID ${id} akan dihapus`);
-  setLongPressId(null); // tutup modal
-};
+  const [modalData, setModalData] = useState<FinanceData | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const { user } = useAuth();
+
+  const handleClickCard = (id: string): void => {
+    setSelectedId(id);
+    setModalData(financeData.find((data) => data.id === id) || null);
+  };
+
+  /**
+   * Handles the deletion of a financial record in the Firestore database.
+   * Shows a confirmation alert before deleting the record.
+   * After deletion, fetches the updated data and closes the modal.
+   * @param id The ID of the record to be deleted.
+   */
+  const handleDelete = async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, "financial_records", id));
+    fetchFinanceData();
+    setSelectedId(null); // tutup modal
+  };
 
   /**
    * Fetches categories from the Firestore database, updates the categoryData state
    * with the retrieved records.
    */
-  const fetchCategoryData = async () => {
+  const fetchCategoryData = async ():Promise<void> => {
     const q = query(collection(db, 'user_categories'), where('user_id', '==', user.uid));
     const querySnapshot = await getDocs(q);
 
@@ -96,7 +96,7 @@ const handleDelete = (id: string) => {
    * with the retrieved records, and manages the loading state while data is being fetched.
    * Sets isLoading to true when starting the data fetch and false when data fetching completes.
    */
-  const fetchFinanceData = async () => {
+  const fetchFinanceData = async (): Promise<void> => {
     const q = query(collection(db, 'financial_records'), where('user_id', '==', user.uid));
     const querySnapshot = await getDocs(q);
 
@@ -297,12 +297,14 @@ const handleDelete = (id: string) => {
           ) : filteredData.length > 0 ? (
             filteredData.map((transaction, index) => (
               <motion.div
-  key={transaction.id}
-  onPointerDown={() => handlePointerDown(transaction.id)}
-  onPointerUp={handlePointerUp}
-  onPointerLeave={handlePointerUp}
-  className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 cursor-pointer select-none"
->
+                key={transaction.id}
+                onClick={() => handleClickCard(transaction.id)}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 cursor-pointer select-none"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.02 }}
+              >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center flex-row gap-2 justify-between mb-1">
@@ -347,6 +349,44 @@ const handleDelete = (id: string) => {
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Hmm transaksi masih kosong nih!" />
             </div>
           )}
+          <AnimatePresence>
+            {selectedId && (
+              <Modal onClose={() => setSelectedId(null)}>
+                <span className="text-xs text-slate-500 flex flex-row gap-2 align-middle items-center">
+                  <Calendar className="w-3 text-slate-500"/>
+                  {new Date(modalData?.timestamp.seconds * 1000).toLocaleDateString("id-ID", {
+                            day: "2-digit",
+                            month: "long",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                </span>
+                <h2 className="text-lg font-bold mb-2">{modalData?.description ?? '-'}</h2>
+                <p className="text-sm text-gray-600 mb-4">
+                  <span className="badge badge-sm badge-ghost px-2">kategori: {modalData?.category ?? '-'}</span>
+                  <span className="badge badge-sm badge-ghost px-2">tipe: {modalData?.category ? modalData?.category === 'income' ? 'Pemasukan' : 'Pengeluaran' :  '-'}</span>
+                </p>
+                <div className={`flex flex-row gap-2 p-2 rounded-md bg-gradient-to-r to-white text-slate-600 ${modalData?.type === "income" ? "from-green-100" : "from-red-100"} font-bold`}>
+                  {modalData.type === "income" ? "+" : "-"} {formatIntoRupiah(modalData?.amount ?? 0)}
+                </div>
+                <div className="flex justify-end gap-2 mt-7">
+                  <button
+                    onClick={() => handleDelete(selectedId)}
+                    className="px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600"
+                  >
+                    Hapus
+                  </button>
+                  <button
+                    onClick={() => setSelectedId(null)}
+                    className="px-4 py-2 bg-gray-100 text-sm rounded-lg hover:bg-gray-300"
+                  >
+                    Batal
+                  </button>
+                </div>
+              </Modal>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </div>

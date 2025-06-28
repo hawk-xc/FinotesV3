@@ -13,7 +13,7 @@ interface ModalProps {
   onClose: () => void;
 }
 
-export const Modal = ({ children, onClose }: ModalProps) => {
+export const Modal = ({ children, onClose }: ModalProps): React.JSX.Element => {
   const ref = useRef(null);
   const { overlayProps, underlayProps } = useOverlay({
     isOpen: true,
