@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Search, Filter, Plus, TrendingDown, TrendingUp } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence} from "framer-motion";
+import { Search, TrendingDown, TrendingUp } from "lucide-react";
+import { Modal } from "@/components/Modal"; 
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -50,6 +51,26 @@ const FinanceSection = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
+
+  const [longPressId, setLongPressId] = useState<string | null>(null);
+const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+const handlePointerDown = (id: string) => {
+  timeoutRef.current = setTimeout(() => {
+    setLongPressId(id); // tampilkan modal
+  }, 600); // 600ms untuk long press
+};
+
+const handlePointerUp = () => {
+  if (timeoutRef.current) {
+    clearTimeout(timeoutRef.current);
+  }
+};
+
+const handleDelete = (id: string) => {
+  alert(`Data dengan ID ${id} akan dihapus`);
+  setLongPressId(null); // tutup modal
+};
 
   const { user } = useAuth();
 
@@ -276,13 +297,12 @@ const FinanceSection = () => {
           ) : filteredData.length > 0 ? (
             filteredData.map((transaction, index) => (
               <motion.div
-                key={transaction.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ scale: 1.02 }}
-                className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
-              >
+  key={transaction.id}
+  onPointerDown={() => handlePointerDown(transaction.id)}
+  onPointerUp={handlePointerUp}
+  onPointerLeave={handlePointerUp}
+  className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 cursor-pointer select-none"
+>
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center flex-row gap-2 justify-between mb-1">
