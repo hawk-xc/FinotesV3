@@ -124,7 +124,7 @@ const ProfileSection = () => {
           <div className="flex items-center space-x-4">
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold"
+              className="w-16 aspect-square bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xl font-bold"
             >
               {/* user photo */}
               {user.photoURL ? (
