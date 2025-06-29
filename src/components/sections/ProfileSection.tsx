@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Heart, LogOut, Brain } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,7 @@ import { collection, query, getDocs, where } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
 import GoogleLogo from "../particles/GoogleLogo";
 
-const ProfileSection = () => {
+const ProfileSection = (): React.JSX.Element => {
   const { user, logout } = useAuth();
   const [loveCounter, setLoveCounter] = useState<number>(0);
   const [transaction, setTransaction] = useState<number>(0);

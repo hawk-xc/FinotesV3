@@ -1,19 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Linkedin, Code, Coffee, Palette } from 'lucide-react';
 
-const About: React.FC = () => {
+const About: React.FC = (): React.JSX.Element => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 100);
     return () => clearTimeout(timer);
   }, []);
-
-  const skills = [
-    { icon: Code, name: 'Development', color: 'text-blue-500' },
-    { icon: Palette, name: 'Design', color: 'text-purple-500' },
-    { icon: Coffee, name: 'Problem Solving', color: 'text-amber-500' },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-base-100 via-base-200 to-base-100 py-12 px-4">
