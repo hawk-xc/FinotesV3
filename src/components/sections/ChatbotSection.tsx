@@ -11,8 +11,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { db } from '@/lib/firebaseConfig';
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 
-// Groq-AI SDK
-import Groq from "groq-sdk";
+// Geini-AI
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // message format
 interface Message {
@@ -33,11 +33,8 @@ interface FinancialRecord {
   timestamp: Date;
 }
 
-// Initialize Groq client
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_PUBLIC_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_PUBLIC_GEMINI_API_KEY);
 
 const ChatbotSection = () => {
   const { user } = useAuth();
@@ -61,40 +58,65 @@ const ChatbotSection = () => {
     scrollToBottom();
   }, [messages]);
 
-  const queryGroqAI = async (prompt: string): Promise<string> => {
+  const queryGeminiAI = async (prompt: string): Promise<string> => {
+    const categories = [
+        'Makanan', 'Elektronik', 'Transportasi', 'Hiburan', 'Belanja', 'Lainnya'
+    ];
+    
     try {
-      const chatCompletion = await groq.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content: `Anda adalah asisten keuangan pribadi yang membantu mencatat pemasukan dan pengeluaran. 
-            Tanggapi dengan singkat dan jelas. Jika pengguna menyebutkan nominal uang, ekstrak informasi berikut:
-            - Jenis (pemasukan/pengeluaran)
-            - Jumlah (dalam angka)
-            - Kategori (jika ada)
-            - Deskripsi
-            
-            Format respons untuk transaksi keuangan:
-            "✅ [Pemasukan] [Deskripsi] [Nominal] [Kategori (jika ada)]"
-            atau
-            "💸 [Pengeluaran] [Deskripsi] [Nominal] [Kategori (jika ada)]"
-            
-            Untuk pertanyaan umum, berikan jawaban yang membantu.`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.3,
-        max_tokens: 256
-      });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                temperature: 0.3,
+                maxOutputTokens: 100
+            }
+        });
+
+        const fullPrompt = `Anda adalah asisten keuangan pribadi yang sangat teliti. Tugas Anda adalah:
+        1. Menganalisis input pengguna untuk transaksi keuangan
+        2. Mengidentifikasi jenis transaksi (pemasukan/pengeluaran)
+        3. Mengekstrak jumlah uang dan mengonversi semua format ke angka (contoh: "10rb" → 10000, "1jt" → 1000000)
+        4. Menentukan kategori yang sesuai dari daftar berikut: ${categories.join(', ')}
+        5. Format respons dengan pola yang konsisten
+
+        **Aturan Konversi Nominal:**
+        - "rb" atau "ribu" = 000
+        - "jt" atau "juta" = 000000
+        - "perak" = (abaikan, anggap sebagai Rp)
+        - "ratus ribu" = 00000
+        - "k" = 000 (contoh: 10k = 10000)
+
+        **Format Respons Wajib:**
+        💸 Pengeluaran [Deskripsi] [Nominal dalam angka] [Kategori]
+        ✅ Pemasukan [Deskripsi] [Nominal dalam angka] [Kategori]
+
+        **Contoh:**
+        Input: "Beli kopi vanila 10rb"
+        Output: "💸 Beli kopi vanila 10000 Makanan"
+
+        Input: "Dapat bonus 1.5jt"
+        Output: "✅ Dapat bonus 1500000 Lainnya"
+
+        Input: "Bayar listrik 500 ribu"
+        Output: "💸 Bayar listrik 500000 Lainnya"
+
+        **Kategori Default:** "Lainnya" jika tidak jelas
+
+        Sekarang proses input berikut: "${prompt}"`;
+
+        const result = await model.generateContent(fullPrompt);
+        const response = await result.response;
+        const text = response.text().trim();
       
-      return chatCompletion.choices[0]?.message?.content || "Maaf, saya tidak bisa memproses permintaan Anda saat ini.";
+        // Validasi format output
+        if (!text.match(/^(💸|✅) .+ \d+ (Makanan|Elektronik|Transportasi|Hiburan|Belanja|Lainnya)$/)) {
+            return "Maaf, format respons tidak valid. Silakan coba lagi dengan deskripsi yang lebih jelas.";
+        }
+              
+        return text;
     } catch (error) {
-      console.error("Error querying Groq AI:", error);
-      return "Maaf, terjadi kesalahan saat memproses permintaan Anda.";
+        console.error("Error querying Gemini AI:", error);
+        return "Maaf, terjadi kesalahan saat memproses transaksi Anda.";
     }
   };
 
@@ -156,6 +178,7 @@ const ChatbotSection = () => {
       }
 
       await addDoc(collection(db, 'user_categories'), {
+        user_id: user.uid,
         category: normalizedCategory,
         timestamp: serverTimestamp()
       });
@@ -209,31 +232,39 @@ const ChatbotSection = () => {
   };
 
   const extractAmountFromText = (text: string): number => {
-    // Match formats like "70.000", "70rb", "70000", etc.
-    const amountRegex = /(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+)\s*(?:rb|ribu|jt|juta)?/i;
+    // Enhanced regex to capture more number formats and suffixes
+    const amountRegex = /(\d+([.,]\d+)?)\s*(rb|ribu|k|jt|juta|ratus\s+ribu|perak)?/i;
     const match = text.match(amountRegex);
     
-    if (match) {
-      let amountStr = match[1];
-      
-      // Normalize number format
-      amountStr = amountStr
-        .replace(/\./g, '') // Remove dots (format 70.000)
-        .replace(',', '.');  // Replace comma with dot (format 70,000)
-      
-      const amount = parseFloat(amountStr);
-      
-      // Handle suffixes like 'rb' or 'juta'
-      if (match[2]) {
-        const suffix = match[2].toLowerCase();
-        if (suffix.includes('jt') || suffix.includes('juta')) return amount * 1000000;
-        if (suffix.includes('rb') || suffix.includes('ribu')) return amount * 1000;
-      }
-      
-      return amount;
+    if (!match) return 0;
+
+    let amountStr = match[1];
+    
+    // Normalize number format
+    amountStr = amountStr
+        .replace(/\./g, '') // Remove thousand separators (format 70.000)
+        .replace(',', '.');  // Handle decimal comma (format 70,5 rb → 70.5)
+    
+    const baseAmount = parseFloat(amountStr);
+    
+    // Handle suffixes
+    if (match[3]) {
+        const suffix = match[3].toLowerCase();
+        switch (true) {
+            case suffix.includes('jt') || suffix.includes('juta'):
+                return baseAmount * 1000000;
+            case suffix.includes('ratus ribu'):
+                return baseAmount * 100000;
+            case suffix.includes('rb') || suffix.includes('ribu') || suffix.includes('k'):
+                return baseAmount * 1000;
+            case suffix.includes('perak'):
+                return baseAmount; // "perak" doesn't change the value
+            default:
+                return baseAmount;
+        }
     }
     
-    return 0; // Default if not found
+    return baseAmount;
   };
 
   const handleSendMessage = async () => {
@@ -255,7 +286,7 @@ const ChatbotSection = () => {
       // Save user message to user_chat
       await saveChatMessage(inputText, 'user');
 
-      const aiResponse = await queryGroqAI(inputText);
+      const aiResponse = await queryGeminiAI(inputText);
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         user_id: user.uid,
