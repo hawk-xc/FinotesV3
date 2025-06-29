@@ -336,7 +336,7 @@ const ChatbotSection = () => {
           </div>
           <div>
             <h2 className="font-semibold text-gray-800">Finotes</h2>
-            <p className="text-sm text-gray-500">Powered by Wahyu Tri</p>
+            <p className="text-sm text-gray-500">Catat dulu biar enga lupa</p>
           </div>
         </div>
       </div>
