@@ -13,6 +13,7 @@ import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'fire
 
 // Geini-AI
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import FinotesLogo from "../particles/FinotesLogo";
 
 // message format
 interface Message {
@@ -36,7 +37,7 @@ interface FinancialRecord {
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_PUBLIC_GEMINI_API_KEY);
 
-const ChatbotSection = () => {
+const ChatbotSection = (): React.JSX.Element => {
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -48,11 +49,30 @@ const ChatbotSection = () => {
   ]);
   const [inputText, setInputText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const chatContainerRef = useRef(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      // Scroll ke bawah ketika keyboard muncul (viewport height berkurang)
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   useEffect(() => {
     scrollToBottom();
@@ -327,12 +347,12 @@ const ChatbotSection = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div ref={chatContainerRef} className="flex flex-col h-[100dvh]">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 p-4">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-            <Bot className="w-6 h-6 text-indigo-600" />
+          <div className="w-10 aspect-square bg-indigo-100 rounded-full flex items-center justify-center p-1">
+            <FinotesLogo alt="finotes-logo" />
           </div>
           <div>
             <h2 className="font-semibold text-gray-800">Finotes</h2>
@@ -425,12 +445,18 @@ const ChatbotSection = () => {
       </div>
 
       {/* Input */}
-      <div className="bg-white border-t border-gray-200 p-4">
+      <div className="bg-white border-t border-gray-200 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sticky bottom-0">
         <div className="flex space-x-2">
           <Input
+            type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
+            onFocus={() => {
+              setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 300);
+            }}
             placeholder="ig. makan siang 14rb..."
             className="flex-1 rounded-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
           />
