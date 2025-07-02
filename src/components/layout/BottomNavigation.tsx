@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { MessageCircle, Table, User } from "lucide-react";
+import { MessageCircle, Table, User, ChartArea } from "lucide-react";
 
 interface BottomNavigationProps {
   activeTab: string;
@@ -14,6 +14,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({
   const tabs = [
     { id: "chatbot", label: "Chatbot", icon: MessageCircle },
     { id: "finance", label: "Catatan", icon: Table },
+    { id: "analytic", label: "Analitik", icon: ChartArea },
     { id: "profile", label: "Profil", icon: User },
   ];
 

@@ -7,6 +7,7 @@ import BottomNavigation from "./layout/BottomNavigation";
 import ChatbotSection from "./sections/ChatbotSection";
 import FinanceSection from "./sections/FinanceSection";
 import ProfileSection from "./sections/ProfileSection";
+import AnaliticSection from "./sections/AnalyticSection";
 import { useNavigate } from "react-router-dom";
 
 function Home(): React.JSX.Element {
@@ -37,6 +38,8 @@ function Home(): React.JSX.Element {
         return <ChatbotSection />;
       case "finance":
         return <FinanceSection />;
+      case "analytic":
+        return <AnaliticSection />;
       case "profile":
         return <ProfileSection />;
       default:
