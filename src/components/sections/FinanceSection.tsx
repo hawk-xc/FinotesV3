@@ -282,7 +282,7 @@ const FinanceSection = (): React.JSX.Element => {
 
       {/* Transactions List */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3">
+        <div className="space-y-3 md:flex md:flex-row md:gap-5 md:flex-wrap">
           {isLoading ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
