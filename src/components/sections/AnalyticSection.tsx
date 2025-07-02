@@ -226,7 +226,7 @@ const AnalyticSection = (): React.JSX.Element => {
                     balance >= 0 ? "text-blue-600" : "text-orange-600"
                   }`}
                 >
-                  Neraca
+                  Selisih
                 </p>
                 <p
                   className={`text-xs font-bold ${
