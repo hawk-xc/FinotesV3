@@ -8,6 +8,7 @@ import AreaClosedChart from "@/components/particles/AreaClosedChart";
 
 import { db } from '@/lib/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import ChartLoading from "@/components/particles/ChartLoading";
 
 // get user auth data
 import { useAuth } from "@/contexts/AuthContext";
@@ -35,7 +36,7 @@ interface categoryData {
   };
 }
 
-const FinanceSection = (): React.JSX.Element => {
+const AnalyticSection = (): React.JSX.Element => {
   const [financeData, setFinanceData] = useState<FinanceData[]>([]); 
   const [filteredData, setFilteredData] = useState<FinanceData[]>([]); 
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -267,7 +268,7 @@ const FinanceSection = (): React.JSX.Element => {
             </div>
           </motion.div>
         </div>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* <div className="grid grid-cols-2 gap-3 mb-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
             className="bg-blue-50 p-3 rounded-xl border border-blue-200"
@@ -294,7 +295,7 @@ const FinanceSection = (): React.JSX.Element => {
               </div>
             </div>
           </motion.div>
-        </div>
+        </div> */}
         <div className="grid grid-cols-1 gap-3 mb-4">
           <motion.div
             whileHover={{ scale: 1.02 }}
@@ -312,25 +313,29 @@ const FinanceSection = (): React.JSX.Element => {
         </div>
       </div>
 
-      {/* Transactions List */}
+      {/* Chart Section */}
       <div className="w-full h-[250px] bg-white rounded-lg shadow-sm p-4">
-      <span>Diagram pengeluaran</span>
-      <ParentSize>
-        {({ width, height }) => {
-          if (width > 0 && height > 0 && isLoading) {
-            setIsLoading(false);
-          }
-          return <AreaClosedChart 
-            width={width} 
-            height={height} 
-            data={financeData}
-            margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-          />;
-        }}
-      </ParentSize>
-    </div>
+        <span>Diagram pengeluaran</span>
+        {!isLoading ? (
+          <ParentSize>
+            {({ width, height }) => {
+              if (width > 0 && height > 0 && isLoading) {
+                setIsLoading(false);
+              }
+              return <AreaClosedChart 
+                width={width} 
+                height={height} 
+                data={financeData}
+                margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
+              />;
+            }}
+          </ParentSize>
+        ) : (
+          <ChartLoading />
+        )}
+      </div>
     </div>
   );
 };
 
-export default FinanceSection;
+export default AnalyticSection;

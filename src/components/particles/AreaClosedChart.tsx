@@ -139,18 +139,24 @@ export default withTooltip<AreaProps, FinanceData>(
       
         const x0 = dateScale.invert(x);
         const index = bisector<{ date: Date; amount: number }, Date>((d) => d.date).left(expenseData, x0, 1);
+      
         const d0 = expenseData[index - 1];
         const d1 = expenseData[index];
-        let d = d0;
       
-        if (d1 && d0) {
+        if (!d0 && !d1) return; 
+      
+        let d = d0 || d1; 
+      
+        if (d0 && d1) {
           d = x0.valueOf() - d0.date.valueOf() > d1.date.valueOf() - x0.valueOf() ? d1 : d0;
         }
+      
+        if (!d) return;
       
         showTooltip({
           tooltipData: d,
           tooltipLeft: x,
-          tooltipTop: amountScale(d.amount),
+          tooltipTop: amountScale(d.amount ?? 0),
         });
       },
       [showTooltip, amountScale, dateScale, expenseData],
