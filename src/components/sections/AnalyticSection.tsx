@@ -6,8 +6,6 @@ import { TrendingDown, TrendingUp } from "lucide-react";
 import { ParentSize } from "@visx/responsive";
 import AreaClosedChart from "@/components/particles/AreaClosedChart";
 
-import { db } from '@/lib/firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
 import ChartLoading from "@/components/particles/ChartLoading";
 
 // get user auth data
@@ -53,13 +51,8 @@ const AnalyticSection = (): React.JSX.Element => {
    * Sets isLoading to true when starting the data fetch and false when data fetching completes.
    */
   const fetchFinanceData = async (): Promise<void> => {
-    const q = query(collection(db, 'financial_records'), where('user_id', '==', user.uid));
-    const querySnapshot = await getDocs(q);
-
-    const data: FinanceData[] = [];
-    querySnapshot.forEach((doc) => {
-      data.push({id: doc.id, ...doc.data()} as FinanceData);
-    });
+    const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-records`);
+    const { data } = await resp.json();
 
     setFinanceData(data);
     setFilteredData(data); // Initialize filteredData with all data

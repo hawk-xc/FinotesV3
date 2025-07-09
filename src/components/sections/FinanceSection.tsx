@@ -15,7 +15,7 @@ import {
 import { Empty } from 'antd';
 
 import { db } from '@/lib/firebaseConfig';
-import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 
 // get user auth data
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,14 +79,8 @@ const FinanceSection = (): React.JSX.Element => {
    * with the retrieved records.
    */
   const fetchCategoryData = async ():Promise<void> => {
-    const q = query(collection(db, 'user_categories'), where('user_id', '==', user.uid));
-    const querySnapshot = await getDocs(q);
-
-    const data: categoryData[] = [];
-
-    querySnapshot.forEach((doc) => {
-      data.push({id: doc.id, ...doc.data()} as categoryData);
-    });
+    const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-categories`);
+    const { data } = await resp.json();
 
     setCategoryData(data);
   };
@@ -97,13 +91,8 @@ const FinanceSection = (): React.JSX.Element => {
    * Sets isLoading to true when starting the data fetch and false when data fetching completes.
    */
   const fetchFinanceData = async (): Promise<void> => {
-    const q = query(collection(db, 'financial_records'), where('user_id', '==', user.uid));
-    const querySnapshot = await getDocs(q);
-
-    const data: FinanceData[] = [];
-    querySnapshot.forEach((doc) => {
-      data.push({id: doc.id, ...doc.data()} as FinanceData);
-    });
+    const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-records`);
+    const { data } = await resp.json();
 
     // get category data
     await fetchCategoryData();
@@ -111,7 +100,7 @@ const FinanceSection = (): React.JSX.Element => {
     setFinanceData(data);
     setFilteredData(data); // Initialize filteredData with all data
     setIsLoading(false);
-  }
+  };
 
   useEffect(() => { 
     setIsLoading(true); // start loading

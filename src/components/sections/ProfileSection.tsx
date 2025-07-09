@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { Heart, LogOut, Brain } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { db } from '@/lib/firebaseConfig';
-import { collection, query, getDocs, where } from 'firebase/firestore';
 import { useNavigate } from "react-router-dom";
 import GoogleLogo from "../particles/GoogleLogo";
 
@@ -21,27 +19,31 @@ const ProfileSection = (): React.JSX.Element => {
   // handle transaction && total asset
   const handleGeneralInformation = async () => {
     try {
-      const q = query(collection(db, 'financial_records'), where('user_id', '==', user.uid));
-      
-      const querySnapshot = await getDocs(q);
+      const response = await fetch('https://finoteapiservice-production.up.railway.app/YJAwmbbRhPQF3QFvoIzrrmv7cap2/finance-records');
+
+      if (!response.ok) {
+        console.error(`HTTP error! status: ${response.status}`);
+      }
+
+      const { data } = await response.json();
 
       let total = 0;
       let amount = 0;
 
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        amount += data?.amount ?? 0;
+      data.forEach((record: any) => {
+        amount += record?.amount ?? 0;
         total += 1;
       });
 
       setTransaction(total);
-      setAmountTotal(amount); 
+      setAmountTotal(amount);
 
     } catch (error) {
       console.error(error);
       return false;
     }
-  }
+  };
+
 
   // love counter
   const handleLoveCounter = async () => {
