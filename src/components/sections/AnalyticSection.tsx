@@ -41,9 +41,17 @@ const AnalyticSection = (): React.JSX.Element => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
+  const [categoryData, setCategoryData] = useState<{ [key: string]: number }>({
+    'makanan': 0,
+    'transportasi': 0,
+    'sewa': 0,
+    'belanja': 0,
+    'kesehatan': 0,
+    'hiburan': 0,
+    'lainnya': 0
+  });
 
   const { user } = useAuth();
-
 
   /**
    * Fetches financial records from the Firestore database, updates the financeData state
@@ -57,6 +65,47 @@ const AnalyticSection = (): React.JSX.Element => {
     setFinanceData(data);
     setFilteredData(data); // Initialize filteredData with all data
     setIsLoading(false);
+
+    calculateCategoryData(data);
+  }
+
+  const calculateCategoryData = (transactions: any[]) => {
+    const expenseTransactions = transactions.filter(t => t.type === 'expense');
+    
+    const totalExpense = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+    // Gunakan initial value yang sama dengan state awal
+    const categoryTotals = expenseTransactions.reduce((acc, transaction) => {
+      const category = transaction.category.toLowerCase();
+      const amount = Math.abs(transaction.amount);
+
+      // Pastikan kategori yang valid, default ke 'lainnya' jika tidak ada
+      const validCategories = ['makanan', 'transportasi', 'sewa', 'belanja', 'kesehatan', 'hiburan'];
+      const key = validCategories.includes(category) ? category : 'lainnya';
+
+      return {
+        ...acc,
+        [key]: acc[key] + amount
+      };
+    }, {
+      'makanan': 0,
+      'transportasi': 0,
+      'sewa': 0,
+      'belanja': 0,
+      'kesehatan': 0,
+      'hiburan': 0,
+      'lainnya': 0
+    });
+
+    // Hitung persentase
+    const categoryPercentages = Object.fromEntries(
+      Object.entries(categoryTotals).map(([category, amount]) => [
+        category,
+        totalExpense > 0 ? Math.round((amount as number / totalExpense) * 100) : 0
+      ])
+    );
+
+    setCategoryData(categoryPercentages);
   }
 
   // Utility functions (put these outside your component)
@@ -261,37 +310,9 @@ const AnalyticSection = (): React.JSX.Element => {
             </div>
           </motion.div>
         </div>
-        {/* <div className="grid grid-cols-2 gap-3 mb-4">
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-blue-50 p-3 rounded-xl border border-blue-200"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-blue-600 font-medium">Rata-rata pemasukan / hari</p>
-                <p className="text-xs font-bold text-blue-700">
-                  {formatIntoRupiah(calculateDailyAverage(financeData, 'income'))}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="bg-blue-50 p-3 rounded-xl border border-blue-200"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-blue-600 font-medium">Rata-rata pemasukan / Bulan</p>
-                <p className="text-xs font-bold text-blue-700">
-                  {formatIntoRupiah(calculateMonthlyAverage(financeData, 'income'))}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div> */}
         <div className="grid grid-cols-1 gap-3 mb-4">
           <motion.div
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.006 }}
             className="bg-orange-50 p-3 rounded-xl border border-orange-200"
           >
             <div className="flex items-center justify-between">
@@ -299,6 +320,27 @@ const AnalyticSection = (): React.JSX.Element => {
                 <p className="text-xs text-orange-600 font-medium">Persentase pengeluaran dari pemasukan</p>
                 <p className="text-lg font-bold text-orange-700">
                   {Math.round(calculateExpensePercentage(financeData))}%
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 mb-4">
+          <motion.div
+            whileHover={{ scale: 1.006 }}
+            className="bg-green-50 p-3 rounded-xl border border-green-200"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-orange-600 font-medium">Persentase Pengeluaran berdasarkan Kategori</p>
+                <p className="text-sm mt-3 text-orange-700 flex flex-col gap-1">
+                  <span>🍕 Makanan: {categoryData.makanan}%</span>
+                  <span>🚗 Transportasi: {categoryData.transportasi}%</span>
+                  <span>🏠 Sewa: {categoryData.sewa}%</span>
+                  <span>🛒 Belanja: {categoryData.belanja}%</span>
+                  <span>🏥 Kesehatan: {categoryData.kesehatan}%</span>
+                  <span>🎮 Hiburan: {categoryData.hiburan}%</span>
+                  <span>📦 Lainnya: {categoryData.lainnya}%</span>
                 </p>
               </div>
             </div>

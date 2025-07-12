@@ -271,14 +271,14 @@ const FinanceSection = (): React.JSX.Element => {
 
       {/* Transactions List */}
       <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-3 md:flex md:flex-row md:gap-5 md:flex-wrap">
+        <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
           {isLoading ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
               whileHover={{ scale: 1.02 }}
-              className="flex flex-col gap-2">
+              className="col-span-1 flex flex-col gap-2">
               <div className="skeleton h-20 w-full"></div>
               <div className="skeleton h-20 w-full"></div>
               <div className="skeleton h-20 w-full"></div>
