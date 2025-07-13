@@ -26,6 +26,10 @@ const SelectTrigger = React.forwardRef<
       className
     )}
     {...props}
+    onClick={(e) => {
+      e.stopPropagation(); 
+      props.onClick?.(e);
+    }}
   >
     {children}
     <SelectPrimitive.Icon asChild>
