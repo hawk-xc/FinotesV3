@@ -278,7 +278,7 @@ const FinanceSection = (): React.JSX.Element => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.05 }}
               whileHover={{ scale: 1.02 }}
-              className="col-span-1 flex flex-col gap-2">
+              className="md:col-span-3 max-sm:col-span-1 flex flex-col gap-2">
               <div className="skeleton h-20 w-full"></div>
               <div className="skeleton h-20 w-full"></div>
               <div className="skeleton h-20 w-full"></div>
@@ -291,7 +291,7 @@ const FinanceSection = (): React.JSX.Element => {
                 className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 cursor-pointer select-none"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
+                transition={{ delay: 0.05 }}
                 whileHover={{ scale: 1.02 }}
               >
                   <div className="flex items-center justify-between">
