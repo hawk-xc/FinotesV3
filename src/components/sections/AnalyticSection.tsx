@@ -349,7 +349,7 @@ const AnalyticSection = (): React.JSX.Element => {
       </div>
 
       {/* Chart Section */}
-      <div className="w-full h-[250px] bg-white rounded-lg shadow-sm p-4">
+      <div className="w-full h-[230px] bg-white rounded-lg shadow-sm p-4 mb-3">
         <span>Diagram pengeluaran</span>
         {!isLoading ? (
           <ParentSize>
