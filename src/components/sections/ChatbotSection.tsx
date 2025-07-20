@@ -183,25 +183,22 @@ const ChatbotSection = (): React.JSX.Element => {
     try {
       const normalizedCategory = category.toLowerCase().trim();
       
-      // firebase check handler
-      const q = query(
-        collection(db, 'user_categories'),
-        where('user_id', '==', user.uid),
-        where('category', '==', normalizedCategory)
-      );
-
-      const snapshot = await getDocs(q);
-
-      if (snapshot.size > 0) {
-        console.log(`Kategori "${normalizedCategory}" sudah ada, diabaikan`);
-        return;
-      }
-
-      await addDoc(collection(db, 'user_categories'), {
-        user_id: user.uid,
-        category: normalizedCategory,
-        timestamp: serverTimestamp()
+      const response = await fetch(import.meta.env.VITE_RAILWAY_API_URL + '/finance-categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.uid,
+          category: normalizedCategory,
+        }),
       });
+
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("Gagal simpan ke backend:", err.message);
+        return false;
+      }
 
       return true;
     } catch (error) {
@@ -211,22 +208,38 @@ const ChatbotSection = (): React.JSX.Element => {
   }
 
   const saveFinancialRecord = async (record: FinancialRecord) => {
+    console.log(record);
     try {
       // Clean description by removing category part
       let cleanDescription = record.description
         .replace(new RegExp(`Kategori:\\s*${record.category}`, 'i'), '')
         .trim();
     
-      await addDoc(collection(db, 'financial_records'), {
-        user_id: user.uid,
-        description: cleanDescription,
-        amount: record.amount,
-        type: record.type,
-        category: record.category || 'uncategorized',
-        timestamp: serverTimestamp()
+      const response = await fetch(import.meta.env.VITE_RAILWAY_API_URL + '/finance-records', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.uid,
+          description: cleanDescription,
+          amount: record.amount,
+          type: record.type,
+          category: record.category || 'uncategorized',
+        }),
       });
 
-      record.category && await storeCategories(record?.category);
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("Gagal simpan ke backend:", err.message);
+        return false;
+      }
+
+      if (record.category) {
+        await storeCategories(record.category);
+      }
+
+      console.log('berhasil');
 
       return true;
     } catch (error) {
@@ -238,14 +251,27 @@ const ChatbotSection = (): React.JSX.Element => {
   const saveChatMessage = async (message: string, sender: 'user' | 'bot') => {
     try {
       const amount = extractAmountFromText(message);
-      
-      await addDoc(collection(db, 'user_chat'), {
-        user_id: user.uid,
-        description: message,
-        amount: amount,
-        sender,
-        timestamp: serverTimestamp()
+
+      const response = await fetch(import.meta.env.VITE_RAILWAY_API_URL + '/user-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.uid,
+          description: message,
+          amount: amount,
+          sender,
+        }),
       });
+
+      if (!response.ok) {
+        const err = await response.json();
+        console.error("Gagal simpan ke backend:", err.message);
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error("Error saving chat message:", error);
     }
