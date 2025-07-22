@@ -19,7 +19,7 @@ const ProfileSection = (): React.JSX.Element => {
   // handle transaction && total asset
   const handleGeneralInformation = async () => {
     try {
-      const response = await fetch('https://finoteapiservice-production.up.railway.app/YJAwmbbRhPQF3QFvoIzrrmv7cap2/finance-records');
+      const response = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-records`);
 
       if (!response.ok) {
         console.error(`HTTP error! status: ${response.status}`);
