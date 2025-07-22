@@ -28,8 +28,8 @@ interface FinanceData {
   amount: number;
   type: "expense" | "income";
   timestamp: {
-    seconds: number;
-    nanoseconds: number;
+    _seconds: number;
+    _nanoseconds: number;
   };
 }
 
@@ -38,8 +38,8 @@ interface categoryData {
   user_id: string;
   category: string;
   timestamp: {
-    seconds: number;
-    nanoseconds: number;
+    _seconds: number;
+    _nanoseconds: number;
   };
 }
 
@@ -132,7 +132,7 @@ const FinanceSection = (): React.JSX.Element => {
           return a.description.localeCompare(b.description);
         case "date":
         default:
-          return b.timestamp.seconds - a.timestamp.seconds;
+          return b.timestamp._seconds - a.timestamp._seconds;
       }
     });
     
@@ -320,7 +320,7 @@ const FinanceSection = (): React.JSX.Element => {
                           {transaction.category}
                         </span>
                         <span className="text-xs text-gray-500">
-                          {new Date(transaction.timestamp.seconds * 1000).toLocaleDateString("id-ID", {
+                          {new Date(transaction.timestamp._seconds * 1000).toLocaleDateString("id-ID", {
                             day: "2-digit",
                             month: "long",
                             year: "numeric",
@@ -343,7 +343,7 @@ const FinanceSection = (): React.JSX.Element => {
               <Modal onClose={() => setSelectedId(null)}>
                 <span className="text-xs text-slate-500 flex flex-row gap-2 align-middle items-center">
                   <Calendar className="w-3 text-slate-500"/>
-                  {new Date(modalData?.timestamp.seconds * 1000).toLocaleDateString("id-ID", {
+                  {new Date(modalData?.timestamp._seconds * 1000).toLocaleDateString("id-ID", {
                             day: "2-digit",
                             month: "long",
                             year: "numeric",
