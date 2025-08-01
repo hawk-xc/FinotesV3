@@ -5,10 +5,7 @@ import { motion } from "framer-motion";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { ParentSize } from "@visx/responsive";
 import AreaClosedChart from "@/components/particles/AreaClosedChart";
-
 import ChartLoading from "@/components/particles/ChartLoading";
-
-// get user auth data
 import { useAuth } from "@/contexts/AuthContext";
 
 interface FinanceData {
@@ -19,8 +16,8 @@ interface FinanceData {
   amount: number;
   type: "expense" | "income";
   timestamp: {
-    seconds: number;
-    nanoseconds: number;
+    _seconds: number;
+    _nanoseconds: number;
   };
 }
 
@@ -29,15 +26,15 @@ interface categoryData {
   user_id: string;
   category: string;
   timestamp: {
-    seconds: number;
-    nanoseconds: number;
+    _seconds: number;
+    _nanoseconds: number;
   };
 }
 
 const AnalyticSection = (): React.JSX.Element => {
   const [financeData, setFinanceData] = useState<FinanceData[]>([]); 
   const [filteredData, setFilteredData] = useState<FinanceData[]>([]); 
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("date");
@@ -53,87 +50,86 @@ const AnalyticSection = (): React.JSX.Element => {
 
   const { user } = useAuth();
 
-  /**
-   * Fetches financial records from the Firestore database, updates the financeData state
-   * with the retrieved records, and manages the loading state while data is being fetched.
-   * Sets isLoading to true when starting the data fetch and false when data fetching completes.
-   */
   const fetchFinanceData = async (): Promise<void> => {
-    const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-records`);
-    const { data } = await resp.json();
+    try {
+      setIsLoading(true);
+      const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-records`);
+      const { data } = await resp.json();
+      
+      setFinanceData(data);
+      setFilteredData(data);
+      calculateCategoryData(data);
+    } catch (error) {
+      console.error("Error fetching finance data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    setFinanceData(data);
-    setFilteredData(data); // Initialize filteredData with all data
-    setIsLoading(false);
-
-    calculateCategoryData(data);
-  }
-
-  const calculateCategoryData = (transactions: any[]) => {
+  const calculateCategoryData = (transactions: FinanceData[]) => {
     const expenseTransactions = transactions.filter(t => t.type === 'expense');
     
     const totalExpense = expenseTransactions.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
-    // Gunakan initial value yang sama dengan state awal
     const categoryTotals = expenseTransactions.reduce((acc, transaction) => {
       const category = transaction.category.toLowerCase();
       const amount = Math.abs(transaction.amount);
 
-      // Pastikan kategori yang valid, default ke 'lainnya' jika tidak ada
       const validCategories = ['makanan', 'transportasi', 'sewa', 'belanja', 'kesehatan', 'hiburan'];
       const key = validCategories.includes(category) ? category : 'lainnya';
 
       return {
         ...acc,
-        [key]: acc[key] + amount
+        [key]: (acc[key] || 0) + amount
       };
-    }, {
-      'makanan': 0,
-      'transportasi': 0,
-      'sewa': 0,
-      'belanja': 0,
-      'kesehatan': 0,
-      'hiburan': 0,
-      'lainnya': 0
-    });
+    }, {} as Record<string, number>);
 
-    // Hitung persentase
     const categoryPercentages = Object.fromEntries(
       Object.entries(categoryTotals).map(([category, amount]) => [
         category,
-        totalExpense > 0 ? Math.round((amount as number / totalExpense) * 100) : 0
+        totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0
       ])
     );
 
-    setCategoryData(categoryPercentages);
-  }
+    setCategoryData(prev => ({
+      ...{
+        'makanan': 0,
+        'transportasi': 0,
+        'sewa': 0,
+        'belanja': 0,
+        'kesehatan': 0,
+        'hiburan': 0,
+        'lainnya': 0
+      },
+      ...categoryPercentages
+    }));
+  };
 
-  // Utility functions (put these outside your component)
-  const calculateDailyAverage = (transactions: any[], type: 'expense' | 'income') => {
-    const filtered = transactions.filter(t => t.type === type && t.timestamp?.seconds);
+  const calculateDailyAverage = (transactions: FinanceData[], type: 'expense' | 'income') => {
+    const filtered = transactions.filter(t => t.type === type && t.timestamp?._seconds);
     if (filtered.length === 0) return 0;
 
     const groupedByDate = new Map<string, number>();
 
     filtered.forEach(t => {
-      const dateKey = new Date(t.timestamp.seconds * 1000).toISOString().split('T')[0];
+      const dateKey = new Date(t.timestamp._seconds * 1000).toISOString().split('T')[0];
       groupedByDate.set(dateKey, (groupedByDate.get(dateKey) || 0) + Math.abs(t.amount || 0));
     });
 
     const totalAmount = [...groupedByDate.values()].reduce((sum, val) => sum + val, 0);
     const totalDays = groupedByDate.size;
 
-    return totalAmount / totalDays;
+    return totalDays > 0 ? totalAmount / totalDays : 0;
   };
 
-  const calculateMonthlyAverage = (transactions: any[], type: 'expense' | 'income') => {
-    const filtered = transactions.filter(t => t.type === type && t.timestamp?.seconds);
+  const calculateMonthlyAverage = (transactions: FinanceData[], type: 'expense' | 'income') => {
+    const filtered = transactions.filter(t => t.type === type && t.timestamp?._seconds);
     if (filtered.length === 0) return 0;
 
     const groupedByMonth = new Map<string, number>();
 
     filtered.forEach(t => {
-      const date = new Date(t.timestamp.seconds * 1000);
+      const date = new Date(t.timestamp._seconds * 1000);
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       groupedByMonth.set(monthKey, (groupedByMonth.get(monthKey) || 0) + Math.abs(t.amount || 0));
     });
@@ -141,36 +137,35 @@ const AnalyticSection = (): React.JSX.Element => {
     const totalAmount = [...groupedByMonth.values()].reduce((sum, val) => sum + val, 0);
     const totalMonths = groupedByMonth.size;
 
-    return totalAmount / totalMonths;
+    return totalMonths > 0 ? totalAmount / totalMonths : 0;
   };
 
-  const calculateExpensePercentage = (transactions: any[]) => {
+  const calculateExpensePercentage = (transactions: FinanceData[]) => {
     const totalIncome = transactions
       .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
 
-    const totalExpense = transactions
+    const totalExpense = Math.abs(transactions
       .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (t.amount || 0), 0));
 
     if (totalIncome === 0) return 0;
     return (totalExpense / totalIncome) * 100;
   };
 
   useEffect(() => { 
-    setIsLoading(true); // start loading
-    fetchFinanceData();
-  }, []);
+    if (user?.uid) {
+      fetchFinanceData();
+    }
+  }, [user?.uid]);
 
   useEffect(() => {
     let result = [...financeData];
     
-    // Apply category filter
     if (categoryFilter !== "all") {
       result = result.filter(item => item.category.toLowerCase() === categoryFilter.toLowerCase());
     }
     
-    // Apply search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       result = result.filter(item => 
@@ -187,7 +182,7 @@ const AnalyticSection = (): React.JSX.Element => {
           return a.description.localeCompare(b.description);
         case "date":
         default:
-          return b.timestamp.seconds - a.timestamp.seconds;
+          return b.timestamp._seconds - a.timestamp._seconds;
       }
     });
     
@@ -203,7 +198,7 @@ const AnalyticSection = (): React.JSX.Element => {
       currency: "IDR",
       minimumFractionDigits: 0,
     }).format(amount);
-  } 
+  };
 
   const totalIncome = incomeTransactions.length
     ? incomeTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
@@ -214,6 +209,17 @@ const AnalyticSection = (): React.JSX.Element => {
     : 0;
 
   const balance = totalIncome - totalExpenses;
+
+  // Format data untuk chart
+  const prepareChartData = (data: FinanceData[]) => {
+    const expenseData = data.filter(t => t.type === 'expense' && t.timestamp?._seconds);
+    
+    return expenseData.map(t => ({
+      date: new Date(t.timestamp._seconds * 1000),
+      amount: Math.abs(t.amount),
+      category: t.category
+    })).sort((a, b) => a.date.getTime() - b.date.getTime());
+  };
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-y-scroll">
@@ -281,6 +287,7 @@ const AnalyticSection = (): React.JSX.Element => {
             </div>
           </motion.div>
         </div>
+        
         {/* Updated Analytics Cards */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <motion.div
@@ -350,20 +357,17 @@ const AnalyticSection = (): React.JSX.Element => {
 
       {/* Chart Section */}
       <div className="w-full h-[230px] bg-white rounded-lg shadow-sm p-4 mb-3">
-        <span>Diagram pengeluaran</span>
+        <span className="text-sm font-medium text-gray-700">Diagram Pengeluaran</span>
         {!isLoading ? (
           <ParentSize>
-            {({ width, height }) => {
-              if (width > 0 && height > 0 && isLoading) {
-                setIsLoading(false);
-              }
-              return <AreaClosedChart 
+            {({ width, height }) => (
+              <AreaClosedChart 
                 width={width} 
-                height={height} 
-                data={financeData}
-                margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-              />;
-            }}
+                height={height - 30} // Adjust for title space
+                data={prepareChartData(financeData)}
+                margin={{ top: 20, right: 20, bottom: 30, left: 40 }}
+              />
+            )}
           </ParentSize>
         ) : (
           <ChartLoading />
