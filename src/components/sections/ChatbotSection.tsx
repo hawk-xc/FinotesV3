@@ -183,7 +183,7 @@ const ChatbotSection = (): React.JSX.Element => {
     try {
       const normalizedCategory = category.toLowerCase().trim();
       
-      const response = await fetch(import.meta.env.VITE_RAILWAY_API_URL + '/finance-categories', {
+      const response = await fetch(import.meta.env.VITE_PUBLIC_API_SERVICE + '/finance-categories', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +215,7 @@ const ChatbotSection = (): React.JSX.Element => {
         .replace(new RegExp(`Kategori:\\s*${record.category}`, 'i'), '')
         .trim();
     
-      const response = await fetch(import.meta.env.VITE_RAILWAY_API_URL + '/finance-records', {
+      const response = await fetch(import.meta.env.VITE_PUBLIC_API_SERVICE + '/finance-records', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +252,7 @@ const ChatbotSection = (): React.JSX.Element => {
     try {
       const amount = extractAmountFromText(message);
 
-      const response = await fetch(import.meta.env.VITE_RAILWAY_API_URL + '/user-chat', {
+      const response = await fetch(import.meta.env.VITE_PUBLIC_API_SERVICE + '/user-chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

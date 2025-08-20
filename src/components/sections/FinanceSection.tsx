@@ -79,7 +79,7 @@ const FinanceSection = (): React.JSX.Element => {
    * with the retrieved records.
    */
   const fetchCategoryData = async ():Promise<void> => {
-    const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-categories`);
+    const resp = await fetch(`${import.meta.env.VITE_PUBLIC_API_SERVICE}/${user.uid}/finance-categories`);
     const { data } = await resp.json();
 
     setCategoryData(data);
@@ -91,7 +91,7 @@ const FinanceSection = (): React.JSX.Element => {
    * Sets isLoading to true when starting the data fetch and false when data fetching completes.
    */
   const fetchFinanceData = async (): Promise<void> => {
-    const resp = await fetch(`https://finoteapiservice-production.up.railway.app/${user.uid}/finance-records`);
+    const resp = await fetch(`${import.meta.env.VITE_PUBLIC_API_SERVICE}/${user.uid}/finance-records`);
     const { data } = await resp.json();
 
     // get category data
